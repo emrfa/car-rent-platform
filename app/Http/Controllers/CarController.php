@@ -35,7 +35,7 @@ class CarController extends Controller
         // 1. Apply search if it exists
         if ($searchTerm) {
             $searchTermLower = strtolower($searchTerm);
-            $query->where(function ($q) use ($searchTerm) {
+            $query->where(function ($q) use ($searchTermLower) {
                $q->whereRaw('LOWER(brand) LIKE ?', ["%{$searchTermLower}%"])
                   ->orWhereRaw('LOWER(model) LIKE ?', ["%{$searchTermLower}%"])
                   ->orWhereRaw('LOWER(body_type) LIKE ?', ["%{$searchTermLower}%"]);
