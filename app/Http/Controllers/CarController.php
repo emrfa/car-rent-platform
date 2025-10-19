@@ -31,9 +31,10 @@ class CarController extends Controller
 
         $searchTerm = $request->input('search');
         $currentFilter = $request->input('body_type', 'all'); // Get the filter, default to 'all'
-
+        
         // 1. Apply search if it exists
         if ($searchTerm) {
+            $searchTermLower = strtolower($searchTerm);
             $query->where(function ($q) use ($searchTerm) {
                $q->whereRaw('LOWER(brand) LIKE ?', ["%{$searchTermLower}%"])
                   ->orWhereRaw('LOWER(model) LIKE ?', ["%{$searchTermLower}%"])
