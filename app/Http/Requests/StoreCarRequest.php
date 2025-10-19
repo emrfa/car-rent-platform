@@ -8,8 +8,6 @@ class StoreCarRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        // For now, we'll allow any authenticated user.
-        // We will add admin-only logic later.
         return true;
     }
 
@@ -21,11 +19,12 @@ class StoreCarRequest extends FormRequest
             'body_type' => 'required|string|in:sedan,suv,mpv,hatchback',
             'seats' => 'required|integer|min:1',
             'fuel_type' => 'required|string|in:gasoline,diesel,electric,hybrid',
+            'transmission' => 'required|string|in:manual,automatic',
             'year' => 'required|integer|digits:4',
             'license_plate' => 'required|string|max:255|unique:cars,license_plate',
             'price_per_day' => 'required|numeric|min:0',
             'images' => 'required|array',
-            'images.*' => 'image|mimes:jpeg,png,jpg|max:16384' // Increased to 16MB
+            'images.*' => 'image|mimes:jpeg,png,jpg|max:16384'
         ];
     }
 }
