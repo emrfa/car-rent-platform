@@ -26,6 +26,10 @@
                         {{ __('Bookings') }}
                     </x-nav-link>
 
+                    <x-nav-link :href="route('home')" :active="false" target="_blank">
+                        {{ __('Back to User Page') }}
+                    </x-nav-link>
+
                 </div>
             </div>
 
