@@ -3,40 +3,39 @@
     <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
-        
+
         <title>{{ $title ?? 'Car Rent - Your Journey, Your Choice' }}</title>
-        
+
         @vite(['resources/css/app.css', 'resources/js/app.js'])
-        
+
         {{ $head ?? '' }}
     </head>
     <body class="font-sans antialiased {{ $bodyClass ?? 'bg-white' }}">
-        
-        <div class="sticky top-0 z-50 bg-white shadow-md">
+
+        <div x-data="{ open: false }" class="sticky top-0 z-50 bg-white shadow-md">
             <div class="container mx-auto px-4 sm:px-6 lg:px-8">
-                <nav class="flex justify-between items-center py-4">
-                    <a href="{{ route('home') }}" class="font-extrabold text-2xl tracking-tight text-gray-900">
+                <div class="flex justify-between items-center py-4">
+                    <a href="{{ route('home') }}" class="font-extrabold text-2xl tracking-tight text-gray-900 flex-shrink-0">
                         Car Rent
                     </a>
+
+                    {{-- Desktop Menu Links --}}
                     <div class="hidden md:flex items-center space-x-10 font-semibold">
                         <a href="{{ route('cars.index') }}" class="{{ request()->routeIs('cars.index') ? 'text-gray-900' : 'text-gray-500' }} hover:text-gray-900 transition-colors">All Cars</a>
                         <a href="{{ route('services') }}" class="{{ request()->routeIs('services') ? 'text-gray-900' : 'text-gray-500' }} hover:text-gray-900 transition-colors">Our Services</a>
                         <a href="{{ route('contact') }}" class="{{ request()->routeIs('contact') ? 'text-gray-900' : 'text-gray-500' }} hover:text-gray-900 transition-colors">Contact Us</a>
                     </div>
-                   <div class="flex items-center space-x-4">
-                        @auth
-                            {{-- Check user role --}}
-                            {{-- *** Adjust Auth::user()->role === 'admin' based on your User model *** --}}
+
+                    {{-- Desktop Auth Links --}}
+                    <div class="hidden md:flex items-center space-x-4 flex-shrink-0">
+                         @auth
                             @if (Auth::user()->role === 'admin')
-                                {{-- Link for Admins --}}
                                 <a href="{{ route('admin.dashboard') }}" class="font-semibold text-gray-500 hover:text-gray-900 transition duration-150 ease-in-out">Admin Dashboard</a>
                             @else
-                                {{-- Link for Regular Logged-in Users --}}
                                 <a href="{{ route('booking.index') }}" class="font-semibold text-gray-500 hover:text-gray-900 transition duration-150 ease-in-out">My Bookings</a>
                                 <a href="{{ route('profile.edit') }}" class="font-semibold text-gray-500 hover:text-gray-900 transition duration-150 ease-in-out">My Profile</a>
                             @endif
-
-                            {{-- Logout Button for ALL Logged-in Users --}}
+                            {{-- Logout Form --}}
                             <form method="POST" action="{{ route('logout') }}">
                                 @csrf
                                 <a href="{{ route('logout') }}"
@@ -46,24 +45,91 @@
                                 </a>
                             </form>
                         @else
-                            {{-- Links for Guests (Not Logged In) --}}
                             <a href="{{ route('login') }}" class="font-semibold text-gray-500 hover:text-gray-900 transition duration-150 ease-in-out">Log in</a>
-
                             @if (Route::has('register'))
                                 <a href="{{ route('register') }}" class="ml-4 font-semibold text-gray-500 hover:text-gray-900 transition duration-150 ease-in-out">Register</a>
                             @endif
                         @endauth
                     </div>
-                </nav>
-            </div>
-        </div>
 
+                    {{-- Hamburger Button --}}
+                    <div class="-mr-2 flex items-center md:hidden">
+                        <button @click="open = ! open" class="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:bg-gray-100 focus:text-gray-500 transition duration-150 ease-in-out">
+                            <svg class="h-6 w-6" stroke="currentColor" fill="none" viewBox="0 0 24 24">
+                                <path :class="{'hidden': open, 'inline-flex': ! open }" class="inline-flex" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                                <path :class="{'hidden': ! open, 'inline-flex': open }" class="hidden" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                </div> {{-- End flex justify-between --}}
+            </div> {{-- End container --}}
+
+            {{-- Mobile Menu --}}
+            <div :class="{'block': open, 'hidden': ! open}" class="hidden md:hidden border-t border-gray-200">
+                <div class="pt-2 pb-3 space-y-1">
+                    <x-responsive-nav-link :href="route('cars.index')" :active="request()->routeIs('cars.index')">
+                        All Cars
+                    </x-responsive-nav-link>
+                    <x-responsive-nav-link :href="route('services')" :active="request()->routeIs('services')">
+                        Our Services
+                    </x-responsive-nav-link>
+                    <x-responsive-nav-link :href="route('contact')" :active="request()->routeIs('contact')">
+                        Contact Us
+                    </x-responsive-nav-link>
+                </div>
+
+                {{-- Mobile Auth Links/User Info --}}
+                <div class="pt-4 pb-3 border-t border-gray-200">
+                    @auth
+                        <div class="px-4">
+                            <div class="font-medium text-base text-gray-800">{{ Auth::user()->name }}</div>
+                            <div class="font-medium text-sm text-gray-500">{{ Auth::user()->email }}</div>
+                        </div>
+                        <div class="mt-3 space-y-1">
+                            @if (Auth::user()->role === 'admin')
+                                <x-responsive-nav-link :href="route('admin.dashboard')">
+                                    Admin Dashboard
+                                </x-responsive-nav-link>
+                            @else
+                                <x-responsive-nav-link :href="route('booking.index')">
+                                    My Bookings
+                                </x-responsive-nav-link>
+                                <x-responsive-nav-link :href="route('profile.edit')">
+                                    My Profile
+                                </x-responsive-nav-link>
+                            @endif
+                            {{-- Logout Form --}}
+                            <form method="POST" action="{{ route('logout') }}">
+                                @csrf
+                                <x-responsive-nav-link :href="route('logout')"
+                                        onclick="event.preventDefault(); this.closest('form').submit();">
+                                    {{ __('Log Out') }}
+                                </x-responsive-nav-link>
+                            </form>
+                        </div>
+                    @else
+                        <div class="space-y-1">
+                            <x-responsive-nav-link :href="route('login')">
+                                Log in
+                            </x-responsive-nav-link>
+                            @if (Route::has('register'))
+                                <x-responsive-nav-link :href="route('register')">
+                                    Register
+                                </x-responsive-nav-link>
+                            @endif
+                        </div>
+                    @endauth
+                </div>
+            </div> {{-- End Mobile Menu --}}
+        </div> {{-- End Sticky Header Div --}}
+
+        {{-- Main Content Slot --}}
         {{ $slot }}
 
         <footer class="bg-gray-900 text-gray-300 border-t border-gray-700">
             <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-16">
                 <div class="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-5 gap-12">
-                    
+
                     <div class="md:col-span-4 lg:col-span-2">
                         <a href="{{ route('home') }}" class="font-extrabold text-3xl tracking-tight text-white">
                             Car Rent
@@ -112,7 +178,6 @@
 
                 <div class="mt-16 pt-8 border-t border-gray-700 flex flex-col sm:flex-row justify-between items-center">
                     <p class="text-sm text-gray-400">&copy; {{ date('Y') }} Car Rent. All rights reserved.</p>
-                    
                     <div class="flex space-x-5 mt-4 sm:mt-0">
                         <a href="#" class="text-gray-400 hover:text-white">
                             <span class="sr-only">Facebook</span>
@@ -136,7 +201,7 @@
                 </div>
             </div>
         </footer>
-    
+
         {{ $scripts ?? '' }}
     </body>
 </html>

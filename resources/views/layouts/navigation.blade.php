@@ -26,7 +26,7 @@
                         {{ __('Bookings') }}
                     </x-nav-link>
 
-                    <x-nav-link :href="route('home')" :active="false" target="_blank">
+                    <x-nav-link :href="route('home')" :active="false">
                         {{ __('Back to User Page') }}
                     </x-nav-link>
 
@@ -84,6 +84,18 @@
         <div class="pt-2 pb-3 space-y-1">
             <x-responsive-nav-link :href="route('dashboard')" :active="request()->routeIs('dashboard')">
                 {{ __('Dashboard') }}
+            </x-responsive-nav-link>
+
+            <x-responsive-nav-link :href="route('admin.cars.index')" :active="request()->routeIs('admin.cars.*')">
+            {{ __('Cars') }}
+            </x-responsive-nav-link>
+
+            <x-responsive-nav-link :href="route('admin.bookings.index')" :active="request()->routeIs('admin.bookings.*')">
+                {{ __('Bookings') }}
+            </x-responsive-nav-link>
+
+            <x-responsive-nav-link :href="route('home')" :active="false">
+                {{ __('Back to User Page') }}
             </x-responsive-nav-link>
         </div>
 

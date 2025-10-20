@@ -14,19 +14,23 @@
     </x-slot>
 
     <main class="py-16 lg:py-24">
-        <div class="container mx-auto px-4 sm:px-6 lg:px-8">
-
-            <div class="relative text-center">
-                 <a href="{{ route('cars.show', $car) }}" class="absolute left-0 top-1/2 -translate-y-1/2 text-gray-600 hover:text-gray-900 transition-colors group">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="inline h-5 w-5 mr-1 group-hover:-translate-x-1 transition-transform">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
-                    </svg>
-                    Go Back
-                </a>
-                <h1 class="text-3xl md:text-4xl font-bold text-gray-900 tracking-tight">
+      <div class="container mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex flex-col md:flex-row items-center md:relative md:text-center space-y-4 md:space-y-0 mb-8 md:mb-0">
+                <div class="w-full md:absolute md:left-0 md:top-1/2 md:-translate-y-1/2 md:w-auto text-center md:text-left">
+                    <a href="{{ route('cars.show', $car) }}"
+                    class="inline-flex items-center px-5 py-2 bg-black text-white font-bold text-sm rounded-md hover:bg-gray-800 transition-colors duration-150 ease-in-out group">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="inline h-4 w-4 mr-1.5 group-hover:-translate-x-0.5 transition-transform">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+                        </svg>
+                        Go Back
+                    </a>
+                </div>
+                <h1 class="text-3xl md:text-4xl font-bold text-gray-900 tracking-tight text-center w-full md:mx-auto">
                     Confirm Your Booking
                 </h1>
+
             </div>
+        </div>
 
             <div class="mt-12 max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-12">
 
