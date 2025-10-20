@@ -178,6 +178,7 @@
 
                 <div class="mt-16 pt-8 border-t border-gray-700 flex flex-col sm:flex-row justify-between items-center">
                     <p class="text-sm text-gray-400">&copy; {{ date('Y') }} Car Rent. All rights reserved.</p>
+
                     <div class="flex space-x-5 mt-4 sm:mt-0">
                         <a href="#" class="text-gray-400 hover:text-white">
                             <span class="sr-only">Facebook</span>
