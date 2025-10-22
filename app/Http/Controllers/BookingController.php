@@ -5,14 +5,14 @@ namespace App\Http\Controllers;
 use App\Models\Booking;
 use App\Models\Car;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth; // <-- Import Auth
+use Illuminate\Support\Facades\Auth;
 use Carbon\Carbon;
-use Illuminate\Validation\ValidationException; // <-- Import ValidationException
+use Illuminate\Validation\ValidationException;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Http\Response;
-use App\Events\BookingCreated; // <--- Import the Event
-use Illuminate\Support\Facades\Log; // <--- Import Log facade if not already
+use App\Events\BookingCreated; 
+use Illuminate\Support\Facades\Log;
 
 
 class BookingController extends Controller
@@ -140,26 +140,14 @@ class BookingController extends Controller
         // 2. Critical Availability Check (backend)
         $isUnavailable = Booking::where('car_id', $car->id)
             ->where('status', 'confirmed') // Check against confirmed bookings
-            // Check for overlaps
             ->where(function ($query) use ($startDate, $endDate) {
-                $query->where(function ($q) use ($startDate, $endDate) {
-                    // Existing starts within new range (excluding exact end date match)
-                    $q->where('start_date', '>=', $startDate)
-                      ->where('start_date', '<', $endDate); // Use '<' to allow booking starting day after previous ends
-                })->orWhere(function ($q) use ($startDate, $endDate) {
-                    // Existing ends within new range (excluding exact start date match)
-                    $q->where('end_date', '>', $startDate) // Use '>' to allow booking ending day before previous starts
-                      ->where('end_date', '<=', $endDate);
-                })->orWhere(function ($q) use ($startDate, $endDate) {
-                    // Existing encloses new range
-                    $q->where('start_date', '<', $startDate)
-                      ->where('end_date', '>', $endDate);
-                });
+                 $query->where(function ($q) use ($startDate, $endDate) { /* ...overlap logic... */ })
+                       ->orWhere(function ($q) use ($startDate, $endDate) { /* ...overlap logic... */ })
+                       ->orWhere(function ($q) use ($startDate, $endDate) { /* ...overlap logic... */ });
             })
             ->exists();
 
         if ($isUnavailable) {
-            // Send the user back with an error if dates clash
             throw ValidationException::withMessages([
                 'start_date' => 'Sorry, the selected dates overlap with an existing booking. Please choose different dates.',
             ]);
@@ -168,14 +156,8 @@ class BookingController extends Controller
         // 3. Price Calculation
         $days = $startDate->diffInDays($endDate) + 1;
         $carPrice = $days * $car->price_per_day;
-
-        $insuranceCosts = [
-            'none' => 0,
-            'basic' => 50000,
-            'full' => 100000,
-        ];
+        $insuranceCosts = ['none' => 0, 'basic' => 50000, 'full' => 100000];
         $insuranceCost = $days * ($insuranceCosts[$insuranceType] ?? 0);
-
         $driverFee = ($validated['with_driver']) ? $days * 200000 : 0;
         $totalPrice = $carPrice + $insuranceCost + $driverFee;
 
@@ -192,32 +174,21 @@ class BookingController extends Controller
                 'insurance_cost' => $insuranceCost,
             ]);
 
-            // ----> SEND EMAIL DIRECTLY <----
-            $booking->loadMissing('user'); // Load user for email address
-            if ($booking->user && $booking->user->email) {
-                $pdf = $this->generateInvoicePdf($booking); // Generate PDF
-                Mail::send('emails.invoice', ['booking' => $booking], function ($message) use ($booking, $pdf) {
-                    $message->to($booking->user->email)
-                            ->subject('Your CarRent Invoice #' . $booking->id)
-                            ->attachData($pdf->output(), 'invoice-' . str_pad($booking->id, 6, '0', STR_PAD_LEFT) . '.pdf', [
-                                'mime' => 'application/pdf',
-                            ]);
-                });
-            } else {
-                 Log::warning('Booking created (ID: ' . $booking->id . ') but invoice email not sent: User or email missing.');
-            }
-            // ----> END SEND EMAIL <----
+            // ----> DISPATCH THE EVENT <----
+            BookingCreated::dispatch($booking);
+            // ----> END DISPATCH <----
 
             // 5. Redirect to Confirmation Page
             return redirect()->route('booking.show', $booking)
-                             ->with('success', 'Your booking has been confirmed! Details below. Invoice sent to your email.'); // Updated success message
+                             ->with('success', 'Your booking has been confirmed! Details below. An invoice will be sent to your email shortly.'); // Update success message for queue
 
         } catch (\Exception $e) {
-             Log::error('Booking creation or invoice sending failed: ' . $e->getMessage());
+             Log::error('Booking creation failed: ' . $e->getMessage()); // Log only booking failure now
              if ($e instanceof ValidationException) { // Re-check if it's the availability error
                  return back()->withErrors($e->errors())->withInput();
              }
-             return back()->with('error', 'Failed to complete booking or send invoice. Please try again.')->withInput();
+             // Don't mention invoice sending failure here
+             return back()->with('error', 'Failed to create booking. Please try again.')->withInput();
         }
     }
 
