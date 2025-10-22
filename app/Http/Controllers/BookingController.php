@@ -8,10 +8,76 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth; // <-- Import Auth
 use Carbon\Carbon;
 use Illuminate\Validation\ValidationException; // <-- Import ValidationException
+use Barryvdh\DomPDF\Facade\Pdf;
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Http\Response;
+use App\Events\BookingCreated; // <--- Import the Event
+use Illuminate\Support\Facades\Log; // <--- Import Log facade if not already
+
 
 class BookingController extends Controller
 {
 
+    private function generateInvoicePdf(Booking $booking)
+    {
+        // Ensure relationships are loaded
+        $booking->loadMissing(['car', 'user']);
+
+        // Generate PDF using the template view
+        return Pdf::loadView('invoices.template', compact('booking'))
+                  ->setPaper('A4', 'portrait');
+    }
+
+    /**
+     * Generate and download the invoice PDF.
+     */
+    public function downloadInvoice(Booking $booking): Response // Use Route Model Binding
+    {
+        // Authorization check
+        if ($booking->user_id !== Auth::id() && Auth::user()->role !== 'admin') { // Allow admin too
+            abort(403, 'Unauthorized access');
+        }
+
+        $pdf = $this->generateInvoicePdf($booking);
+        $filename = 'invoice-booking-' . str_pad($booking->id, 6, '0', STR_PAD_LEFT) . '.pdf';
+
+        // Return download response
+        return $pdf->download($filename);
+    }
+
+   public function sendInvoiceEmail(Booking $booking) // Use Route Model Binding
+    {
+        // Authorization check
+        if ($booking->user_id !== Auth::id() && Auth::user()->role !== 'admin') { // Allow admin too
+            abort(403, 'Unauthorized access');
+        }
+
+        // Ensure user relationship is loaded for email address
+        $booking->loadMissing('user');
+
+        if (!$booking->user || !$booking->user->email) {
+            return back()->with('error', 'Cannot send invoice: User email not found.');
+        }
+
+        $pdf = $this->generateInvoicePdf($booking);
+
+        try {
+            Mail::send('emails.invoice', ['booking' => $booking], function ($message) use ($booking, $pdf) {
+                $message->to($booking->user->email)
+                        ->subject('Your CarRent Invoice #' . $booking->id)
+                        ->attachData($pdf->output(), 'invoice-' . str_pad($booking->id, 6, '0', STR_PAD_LEFT) . '.pdf', [
+                            'mime' => 'application/pdf',
+                        ]);
+            });
+
+            return back()->with('success', 'Invoice sent successfully to ' . $booking->user->email . '!');
+
+        } catch (\Exception $e) {
+            // Log the error for debugging
+            \Log::error('Failed to send invoice email for booking #' . $booking->id . ': ' . $e->getMessage());
+            return back()->with('error', 'Failed to send invoice. Please try again later.');
+        }
+    }
 
     public function index()
     {
@@ -114,26 +180,49 @@ class BookingController extends Controller
         $totalPrice = $carPrice + $insuranceCost + $driverFee;
 
         // 4. Create the Booking
-        $booking = Booking::create([
-            'user_id' => Auth::id(), // Get the logged-in user's ID
-            'car_id' => $car->id,
-            'start_date' => $startDate->toDateString(),
-            'end_date' => $endDate->toDateString(),
-            'total_price' => $totalPrice,
-            'status' => 'confirmed', // Consider 'pending' if payment step is needed
-            'insurance_type' => $insuranceType,
-            'insurance_cost' => $insuranceCost,
-            // You might add 'driver_cost' => $driverFee here if you add the column later
-        ]);
+        try {
+            $booking = Booking::create([
+                'user_id' => Auth::id(),
+                'car_id' => $car->id,
+                'start_date' => $startDate->toDateString(),
+                'end_date' => $endDate->toDateString(),
+                'total_price' => $totalPrice,
+                'status' => 'confirmed',
+                'insurance_type' => $insuranceType,
+                'insurance_cost' => $insuranceCost,
+            ]);
 
-        // 5. Redirect to Confirmation Page
-        return redirect()->route('booking.show', $booking)
-                         ->with('success', 'Your booking has been confirmed! Details below.'); // Added more context to message
+            // ----> SEND EMAIL DIRECTLY <----
+            $booking->loadMissing('user'); // Load user for email address
+            if ($booking->user && $booking->user->email) {
+                $pdf = $this->generateInvoicePdf($booking); // Generate PDF
+                Mail::send('emails.invoice', ['booking' => $booking], function ($message) use ($booking, $pdf) {
+                    $message->to($booking->user->email)
+                            ->subject('Your CarRent Invoice #' . $booking->id)
+                            ->attachData($pdf->output(), 'invoice-' . str_pad($booking->id, 6, '0', STR_PAD_LEFT) . '.pdf', [
+                                'mime' => 'application/pdf',
+                            ]);
+                });
+            } else {
+                 Log::warning('Booking created (ID: ' . $booking->id . ') but invoice email not sent: User or email missing.');
+            }
+            // ----> END SEND EMAIL <----
+
+            // 5. Redirect to Confirmation Page
+            return redirect()->route('booking.show', $booking)
+                             ->with('success', 'Your booking has been confirmed! Details below. Invoice sent to your email.'); // Updated success message
+
+        } catch (\Exception $e) {
+             Log::error('Booking creation or invoice sending failed: ' . $e->getMessage());
+             if ($e instanceof ValidationException) { // Re-check if it's the availability error
+                 return back()->withErrors($e->errors())->withInput();
+             }
+             return back()->with('error', 'Failed to complete booking or send invoice. Please try again.')->withInput();
+        }
     }
 
     /**
      * Display the specified booking confirmation.
-     * THIS METHOD WAS MISSING
      */
     public function show(Booking $booking)
     {

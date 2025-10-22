@@ -55,6 +55,10 @@ Route::middleware(['auth', 'verified'])->group(function () { // 'verified' ensur
 
     Route::get('/my-bookings', [BookingController::class, 'index'])->name('booking.index');
 
+    // Invoice Managament
+    Route::get('/my-bookings/{booking}/invoice/download', [BookingController::class, 'downloadInvoice'])->name('booking.invoice.download');
+    Route::post('/my-bookings/{booking}/invoice/send', [BookingController::class, 'sendInvoiceEmail'])->name('booking.invoice.send');
+
 });
 
 // --- ADMIN ROUTES (Login Required + Admin Role) ---
