@@ -138,54 +138,30 @@ class BookingController extends Controller
         $insuranceType = $validated['insurance_type'];
 
         // 2. Critical Availability Check (backend)
-        // $isUnavailable = Booking::where('car_id', $car->id)
-        //     ->where('status', 'confirmed') // Check against confirmed bookings
-        //     ->where(function ($query) use ($startDate, $endDate) {
-        //          $query->where(function ($q) use ($startDate, $endDate) { /* ...overlap logic... */ })
-        //                ->orWhere(function ($q) use ($startDate, $endDate) { /* ...overlap logic... */ })
-        //                ->orWhere(function ($q) use ($startDate, $endDate) { /* ...overlap logic... */ });
-        //     })
-        //     ->exists();
-
-        // if ($isUnavailable) {
-        //     throw ValidationException::withMessages([
-        //         'start_date' => 'Sorry, the selected dates overlap with an existing booking. Please choose different dates.',
-        //     ]);
-        // } commented for debug
-
-        Log::info('Checking availability for Car ID: ' . $car->id . ' between ' . $startDate->toDateString() . ' and ' . $endDate->toDateString());
-
-        $conflictingBookings = Booking::where('car_id', $car->id)
-            ->where('status', 'confirmed')
+        $isUnavailable = Booking::where('car_id', $car->id)
+            ->where('status', 'confirmed') // Check against confirmed bookings
             ->where(function ($query) use ($startDate, $endDate) {
-                $query->where(function ($q) use ($startDate, $endDate) {
+                     $query->where(function ($q) use ($startDate, $endDate) {
+                    // Existing starts within new range (excluding exact end date match)
                     $q->where('start_date', '>=', $startDate)
-                      ->where('start_date', '<', $endDate);
+                      ->where('start_date', '<', $endDate); // Use '<' to allow booking starting day after previous ends
                 })->orWhere(function ($q) use ($startDate, $endDate) {
-                    $q->where('end_date', '>', $startDate)
+                    // Existing ends within new range (excluding exact start date match)
+                    $q->where('end_date', '>', $startDate) // Use '>' to allow booking ending day before previous starts
                       ->where('end_date', '<=', $endDate);
                 })->orWhere(function ($q) use ($startDate, $endDate) {
+                    // Existing encloses new range
                     $q->where('start_date', '<', $startDate)
                       ->where('end_date', '>', $endDate);
                 });
             })
-            // ->exists(); // <-- Temporarily change from exists() to get()
-            ->get(); // <-- Get the actual conflicting bookings (if any)
+            ->exists(); // <-- Use exists()
 
-        // Check if the collection is NOT empty
-        if ($conflictingBookings->isNotEmpty()) {
-            // Log the bookings found
-            Log::error('Conflict detected! Existing bookings found:', $conflictingBookings->toArray());
-
-             // --- Use dd() to stop execution and see the conflicting bookings ---
-             dd('Conflict detected!', $conflictingBookings->toArray(), $startDate, $endDate); // <-- UNCOMMENT THIS LINE FOR IMMEDIATE DEBUGGING
-
-            // Throw the exception (keep this for normal flow after debugging)
-             throw ValidationException::withMessages([
-                 'start_date' => 'Sorry, the selected dates overlap with an existing booking. Please choose different dates.',
-             ]);
-        }
-        // --- END TEMPORARY DEBUGGING ---
+        if ($isUnavailable) { // <-- Original check
+            Log::warning('Availability check failed for Car ID: ' . $car->id . ' between ' . $startDate->toDateString() . ' and ' . $endDate->toDateString());
+            throw ValidationException::withMessages([
+                'start_date' => 'Sorry, the selected dates overlap with an existing booking. Please choose different dates.',
+            ]);        }
 
         // 3. Price Calculation
         $days = $startDate->diffInDays($endDate) + 1;
