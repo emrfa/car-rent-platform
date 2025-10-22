@@ -1,3 +1,4 @@
+@dump($errors->all())
 <x-layout :title="'Book ' . $car->brand . ' ' . $car->model . ' - Car Rent'" bodyClass="bg-gray-50">
 
     <x-slot name="head">
