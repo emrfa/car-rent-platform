@@ -37,12 +37,6 @@ return [
 
     'mailers' => [
 
-
-        'brevo' => [ // <-- Add this block
-        'transport' => 'brevo',
-        'key' => env('BREVO_API_KEY'),
-        ],
-        
         'smtp' => [
             'transport' => 'smtp',
             'scheme' => env('MAIL_SCHEME'),
